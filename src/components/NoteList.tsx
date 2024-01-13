@@ -2,15 +2,15 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Note } from '../types';
-import NoteForm from './NoteForm';
 import './NoteList.css';
 
 const NoteList: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
-  const [deleteNoteId, setDeleteNoteId] = useState<number | null>(null); // Keep track of the note to be deleted
+  const [sortOrderTitle, setSortOrderTitle] = useState<'asc' | 'desc'>('asc');
+  const [sortOrderCreatedAt, setSortOrderCreatedAt] = useState<'newest' | 'oldest'>('newest');
+  const [selectedSortOption, setSelectedSortOption] = useState<'title' | 'createdAt'>('title');
+  const [deleteNoteId, setDeleteNoteId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchNotes = async () => {
@@ -26,16 +26,6 @@ const NoteList: React.FC = () => {
     fetchNotes();
   }, []);
 
-  const handleNoteAdded = async () => {
-    // Refresh the notes list after adding a new note
-    try {
-      const response = await axios.get<Note[]>('http://localhost:3001/notes');
-      setNotes(response.data);
-    } catch (error) {
-      console.error('Error fetching notes:', error);
-    }
-  };
-
   const handleDelete = async (id: number) => {
     try {
       await axios.delete(`http://localhost:3001/notes/${id}`);
@@ -46,29 +36,32 @@ const NoteList: React.FC = () => {
     }
   };
 
-  const handleSortToggle = () => {
-    setSortOrder((prevOrder) => (prevOrder === 'asc' ? 'desc' : 'asc'));
+
+  const handleSortTitleToggle = () => {
+    setSortOrderTitle((prevOrder) => (prevOrder === 'asc' ? 'desc' : 'asc'));
+    setSelectedSortOption('title');
   };
 
-  const handleSortByToggle = (option: 'newest' | 'oldest') => {
-    setSortBy(option);
+  const handleSortCreatedAtToggle = (option: 'newest' | 'oldest') => {
+    setSortOrderCreatedAt(option);
+    setSelectedSortOption('createdAt');
   };
 
   const sortedNotes = [...notes].sort((a, b) => {
-    if (sortBy === 'newest') {
+    if (selectedSortOption === 'createdAt') {
       const dateA = new Date(a.createdAt).getTime();
       const dateB = new Date(b.createdAt).getTime();
-      return sortOrder === 'asc' ? dateB - dateA : dateA - dateB;
+      return sortOrderCreatedAt === 'newest' ? dateB - dateA : dateA - dateB;
     } else {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
-      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+      const titleA = a.title.toLowerCase();
+      const titleB = b.title.toLowerCase();
+      return sortOrderTitle === 'asc' ? titleA.localeCompare(titleB) : titleB.localeCompare(titleA);
     }
   });
 
   const formatDate = (timestamp: string) => {
     const date = new Date(timestamp);
-    return date.toLocaleString(); // Adjust the format as needed
+    return date.toLocaleString();
   };
 
   if (error) {
@@ -80,10 +73,14 @@ const NoteList: React.FC = () => {
       <h2>
         Notes{' '}
         <div className="button-container">
-          <button onClick={handleSortToggle}>
-            Sort ({sortOrder.toUpperCase()})
+          <button onClick={handleSortTitleToggle} className={selectedSortOption === 'title' ? 'active' : ''}>
+            Sort Title ({sortOrderTitle.toUpperCase()})
           </button>{' '}
-          <select onChange={(e) => handleSortByToggle(e.target.value as 'newest' | 'oldest')} value={sortBy}>
+          <select
+            onChange={(e) => handleSortCreatedAtToggle(e.target.value as 'newest' | 'oldest')}
+            value={sortOrderCreatedAt}
+            className={selectedSortOption === 'createdAt' ? 'active' : ''}
+          >
             <option value="newest">Newest</option>
             <option value="oldest">Oldest</option>
           </select>
@@ -109,3 +106,4 @@ const NoteList: React.FC = () => {
 };
 
 export default NoteList;
+
